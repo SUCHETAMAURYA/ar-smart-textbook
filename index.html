@@ -1,47 +1,562 @@
-<!--
- Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
-
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-
-     http://www.apache.org/licenses/LICENSE-2.0
-
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
--->
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1, shrink-to-fit=no"
-    />
-    <link rel="shortcut icon" href="./favicon.png" />
-    <link
-      rel="preload"
-      href="./static/media/SourceSansVF-Upright.ttf.BsWL4Kly.woff2"
-      as="font"
-      type="font/woff2"
-      crossorigin
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Smart Textbook - Live Scanner</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <title>Streamlit</title>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-    <!-- initialize window.prerenderReady to false and then set to true in React app when app is ready for indexing -->
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #667eea;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 60%;
+            border: 3px dashed rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            pointer-events: none;
+        }
+
+        .scan-instruction {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: #f8f9fa;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #38a169;
+        }
+
+        .status {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 640px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.scanning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status.found {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .ar-display {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .ar-display.active {
+            display: block;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .model-viewer {
+            text-align: center;
+            padding: 40px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .model-3d {
+            font-size: 120px;
+            animation: float 3s ease-in-out infinite;
+            cursor: pointer;
+            display: inline-block;
+            transition: transform 0.3s;
+        }
+
+        .model-3d:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        .info-card {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+
+        .info-card h2 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .info-card p {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .facts-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .facts-list li {
+            background: white;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .detected-text {
+            background: #edf2f7;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #2d3748;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 18px;
+            }
+            
+            .model-3d {
+                font-size: 80px;
+            }
+            
+            button {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <span style="font-size: 32px;">📚</span>
+            <h1>AR Smart Textbook - Live Scanner</h1>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="camera-container">
+            <video id="video" autoplay playsinline></video>
+            <div class="overlay"></div>
+            <div class="scan-instruction">📷 Point camera at textbook</div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-primary" onclick="startCamera()">📹 Start Camera</button>
+            <button class="btn-secondary" onclick="captureAndScan()">🔍 Scan Text</button>
+            <button class="btn-primary" onclick="toggleCamera()">⏸️ Pause</button>
+        </div>
+
+        <div class="status" id="status">Ready to scan textbook pages</div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Reading text...</p>
+        </div>
+
+        <div class="ar-display" id="arDisplay">
+            <div class="model-viewer" id="modelViewer">
+                <div class="model-3d" id="model3d" onclick="rotateModel()">🧬</div>
+            </div>
+            <div class="info-card">
+                <h2 id="conceptTitle">Concept Name</h2>
+                <p id="conceptDescription">Description will appear here</p>
+                <ul class="facts-list" id="factsList"></ul>
+            </div>
+            <div class="detected-text">
+                <strong>Detected Text:</strong>
+                <div id="detectedText"></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
     <script>
-      window.prerenderReady = false
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+        const arDisplay = document.getElementById('arDisplay');
+        const loading = document.getElementById('loading');
+        
+        let stream = null;
+        let rotation = 0;
+
+        // Enhanced knowledge base with more concepts
+        const knowledgeBase = {
+            'mitochondria': {
+                title: 'Mitochondria',
+                description: 'The powerhouse of the cell that produces ATP through cellular respiration. Found in most eukaryotic cells.',
+                model: '🧬',
+                gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                facts: [
+                    'Produces ATP energy through cellular respiration',
+                    'Has its own DNA separate from nuclear DNA',
+                    'Double membrane structure with cristae',
+                    'Believed to have originated from bacteria'
+                ]
+            },
+            'photosynthesis': {
+                title: 'Photosynthesis',
+                description: 'The process by which green plants convert light energy into chemical energy in the form of glucose.',
+                model: '🌱',
+                gradient: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
+                facts: [
+                    'Uses carbon dioxide and water as reactants',
+                    'Produces glucose and oxygen',
+                    'Occurs in chloroplasts of plant cells',
+                    'Light-dependent and light-independent reactions'
+                ]
+            },
+            'dna': {
+                title: 'DNA (Deoxyribonucleic Acid)',
+                description: 'The hereditary material that contains the genetic instructions for all living organisms.',
+                model: '🧬',
+                gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                facts: [
+                    'Double helix structure discovered by Watson and Crick',
+                    'Contains genetic information in sequences',
+                    'Made of four nucleotides: A, T, G, C',
+                    'Can replicate itself for cell division'
+                ]
+            },
+            'cell': {
+                title: 'Cell',
+                description: 'The basic structural and functional unit of all living organisms.',
+                model: '🔬',
+                gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                facts: [
+                    'Prokaryotic cells lack a nucleus',
+                    'Eukaryotic cells have membrane-bound organelles',
+                    'Cell membrane controls what enters and exits',
+                    'Contains cytoplasm and genetic material'
+                ]
+            },
+            'atom': {
+                title: 'Atom',
+                description: 'The smallest unit of ordinary matter that forms a chemical element.',
+                model: '⚛️',
+                gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                facts: [
+                    'Contains protons and neutrons in the nucleus',
+                    'Electrons orbit in electron shells',
+                    'Makes up all matter in the universe',
+                    'Atomic number equals number of protons'
+                ]
+            },
+            'gravity': {
+                title: 'Gravity',
+                description: 'The force that attracts objects with mass toward each other.',
+                model: '🌍',
+                gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                facts: [
+                    'Keeps planets in orbit around stars',
+                    'Discovered and described by Isaac Newton',
+                    'Works on all objects with mass',
+                    'Explains tides, orbits, and falling objects'
+                ]
+            },
+            'neuron': {
+                title: 'Neuron',
+                description: 'A specialized cell that transmits nerve impulses in the nervous system.',
+                model: '🧠',
+                gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+                facts: [
+                    'Has dendrites that receive signals',
+                    'Axon transmits electrical impulses',
+                    'Synapses connect neurons together',
+                    'Can process and transmit information'
+                ]
+            },
+            'water': {
+                title: 'Water (H₂O)',
+                description: 'A polar molecule essential for all known forms of life.',
+                model: '💧',
+                gradient: 'linear-gradient(135deg, #96deda 0%, #50c9c3 100%)',
+                facts: [
+                    'Made of two hydrogen and one oxygen atom',
+                    'Excellent solvent for many substances',
+                    'High specific heat capacity',
+                    'Expands when it freezes'
+                ]
+            }
+        };
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                status.textContent = '✅ Camera active - Point at textbook and click Scan';
+                status.className = 'status found';
+            } catch (err) {
+                status.textContent = '❌ Camera access denied. Please allow camera permissions.';
+                status.className = 'status';
+                alert('Please allow camera access to use this feature!');
+            }
+        }
+
+        function toggleCamera() {
+            if (video.srcObject) {
+                const tracks = video.srcObject.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+                status.textContent = '⏸️ Camera paused';
+            } else {
+                startCamera();
+            }
+        }
+
+        async function captureAndScan() {
+            if (!video.srcObject) {
+                alert('Please start the camera first!');
+                return;
+            }
+
+            // Capture frame
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+
+            status.textContent = '🔍 Scanning text...';
+            status.className = 'status scanning';
+            loading.classList.add('active');
+
+            try {
+                // OCR with Tesseract
+                const result = await Tesseract.recognize(
+                    canvas,
+                    'eng',
+                    {
+                        logger: m => console.log(m)
+                    }
+                );
+
+                const text = result.data.text.toLowerCase();
+                document.getElementById('detectedText').textContent = result.data.text || 'No text detected';
+
+                loading.classList.remove('active');
+
+                // Find matching keyword
+                let foundKeyword = null;
+                for (const keyword in knowledgeBase) {
+                    if (text.includes(keyword)) {
+                        foundKeyword = keyword;
+                        break;
+                    }
+                }
+
+                if (foundKeyword) {
+                    displayAR(foundKeyword, result.data.text);
+                    status.textContent = `✅ Found: ${knowledgeBase[foundKeyword].title}!`;
+                    status.className = 'status found';
+                } else {
+                    status.textContent = '❌ No matching concept found. Try: mitochondria, DNA, cell, photosynthesis, atom, gravity, neuron, water';
+                    status.className = 'status';
+                    arDisplay.classList.remove('active');
+                }
+            } catch (error) {
+                console.error(error);
+                status.textContent = '❌ Error scanning text. Please try again.';
+                loading.classList.remove('active');
+            }
+        }
+
+        function displayAR(keyword, detectedText) {
+            const data = knowledgeBase[keyword];
+            
+            document.getElementById('model3d').textContent = data.model;
+            document.getElementById('conceptTitle').textContent = data.title;
+            document.getElementById('conceptDescription').textContent = data.description;
+            document.getElementById('modelViewer').style.background = data.gradient;
+            
+            const factsList = document.getElementById('factsList');
+            factsList.innerHTML = '';
+            data.facts.forEach(fact => {
+                const li = document.createElement('li');
+                li.textContent = fact;
+                factsList.appendChild(li);
+            });
+
+            arDisplay.classList.add('active');
+            arDisplay.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function rotateModel() {
+            rotation += 45;
+            document.getElementById('model3d').style.transform = `rotate(${rotation}deg)`;
+        }
+
+        // Auto-start camera on load
+        window.addEventListener('load', () => {
+            setTimeout(startCamera, 500);
+        });
     </script>
-    <script type="module" crossorigin src="./static/js/index.CbQtRkVt.js"></script>
-    <link rel="stylesheet" crossorigin href="./static/css/index.CJVRHjQZ.css">
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-  </body>
+</body>
 </html>
