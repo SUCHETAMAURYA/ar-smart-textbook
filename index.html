@@ -32,6 +32,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            flex-wrap: wrap;
             gap: 15px;
         }
 
@@ -58,6 +59,71 @@
             gap: 20px;
         }
 
+        .input-section {
+            width: 100%;
+            max-width: 640px;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .input-section h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .suggestion-chip {
+            background: #edf2f7;
+            color: #4a5568;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .suggestion-chip:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
         .camera-container {
             position: relative;
             width: 100%;
@@ -66,6 +132,11 @@
             border-radius: 20px;
             overflow: hidden;
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .camera-container.active {
+            display: block;
         }
 
         #video {
@@ -101,8 +172,6 @@
         .controls {
             display: flex;
             gap: 10px;
-            padding: 15px;
-            background: #f8f9fa;
             justify-content: center;
             flex-wrap: wrap;
         }
@@ -140,6 +209,17 @@
             background: #38a169;
         }
 
+        .btn-outline {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+        }
+
         .status {
             background: rgba(255, 255, 255, 0.95);
             padding: 15px;
@@ -158,6 +238,11 @@
         .status.found {
             background: #d1fae5;
             color: #065f46;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
         }
 
         .ar-display {
@@ -248,45 +333,31 @@
             transform: translateY(-2px);
         }
 
-        .detected-text {
-            background: #edf2f7;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            font-family: monospace;
-            font-size: 14px;
-            color: #2d3748;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-
-        .keywords-found {
+        .mode-toggle {
+            width: 100%;
+            max-width: 640px;
             background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-        }
-
-        .keywords-found h4 {
-            margin-bottom: 10px;
-            color: #2d3748;
-        }
-
-        .keyword-tag {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 5px 12px;
             border-radius: 15px;
-            margin: 5px;
-            font-size: 13px;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: #edf2f7;
+            color: #4a5568;
+            border-radius: 10px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
         }
 
-        .keyword-tag:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
         }
 
         canvas {
@@ -318,10 +389,6 @@
             100% { transform: rotate(360deg); }
         }
 
-        .emoji-map {
-            display: none;
-        }
-
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 18px;
@@ -343,30 +410,63 @@
         <div class="header-content">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <span style="font-size: 32px;">📚</span>
-                <h1>AR Smart Textbook - Universal Scanner</h1>
+                <h1>AR Smart Textbook</h1>
             </div>
             <div class="badge">∞ Unlimited Concepts</div>
         </div>
     </div>
 
     <div class="main-container">
-        <div class="camera-container">
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <button class="mode-btn active" onclick="switchMode('type')">⌨️ Type Word</button>
+            <button class="mode-btn" onclick="switchMode('camera')">📷 Scan Page</button>
+        </div>
+
+        <!-- Type Mode -->
+        <div class="input-section" id="typeMode">
+            <h2>🔍 Search Any Concept</h2>
+            <div class="input-group">
+                <label>Enter keyword from your textbook:</label>
+                <input 
+                    type="text" 
+                    class="input-field" 
+                    id="keywordInput" 
+                    placeholder="e.g., mitochondria, photosynthesis, gravity..."
+                    onkeypress="if(event.key === 'Enter') searchKeyword()"
+                >
+            </div>
+            
+            <div class="controls">
+                <button class="btn-primary" onclick="searchKeyword()">
+                    🔍 Search & Learn
+                </button>
+            </div>
+
+            <div class="input-group" style="margin-top: 20px;">
+                <label>Popular concepts:</label>
+                <div class="suggestions" id="suggestions"></div>
+            </div>
+        </div>
+
+        <!-- Camera Mode -->
+        <div class="camera-container" id="cameraMode">
             <video id="video" autoplay playsinline></video>
             <div class="overlay"></div>
-            <div class="scan-instruction">📷 Point at ANY textbook - Works with ALL subjects!</div>
+            <div class="scan-instruction">📷 Point at textbook text</div>
         </div>
 
-        <div class="controls">
+        <div class="controls" id="cameraControls" style="display: none;">
             <button class="btn-primary" onclick="startCamera()">📹 Start Camera</button>
-            <button class="btn-secondary" onclick="captureAndScan()">🔍 Scan & Learn</button>
-            <button class="btn-primary" onclick="toggleCamera()">⏸️ Pause</button>
+            <button class="btn-secondary" onclick="captureAndScan()">🔍 Scan Text</button>
+            <button class="btn-outline" onclick="toggleCamera()">⏸️ Pause</button>
         </div>
 
-        <div class="status" id="status">Ready to scan ANY word from your textbook!</div>
+        <div class="status" id="status">Type any word to learn about it!</div>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Reading text & fetching info from Wikipedia...</p>
+            <p id="loadingText">Fetching information...</p>
         </div>
 
         <div class="ar-display" id="arDisplay">
@@ -378,56 +478,10 @@
                 <p id="conceptDescription">Description will appear here</p>
                 <a id="wikiLink" href="#" target="_blank" class="wiki-link">📖 Read Full Article on Wikipedia</a>
             </div>
-            <div class="keywords-found" id="keywordsFound" style="display:none;">
-                <h4>🎯 Other concepts found in this scan:</h4>
-                <div id="keywordsList"></div>
-            </div>
-            <div class="detected-text">
-                <strong>Detected Text:</strong>
-                <div id="detectedText"></div>
-            </div>
         </div>
     </div>
 
     <canvas id="canvas"></canvas>
-
-    <!-- Emoji mapping for different subjects -->
-    <div class="emoji-map" id="emojiMap">
-        {
-            "biology": "🧬", "cell": "🔬", "dna": "🧬", "protein": "🧪", "enzyme": "⚗️",
-            "mitochondria": "🧬", "chloroplast": "🌱", "nucleus": "⚛️", "ribosome": "🧬",
-            "photosynthesis": "🌱", "respiration": "💨", "evolution": "🦕", "genetics": "🧬",
-            
-            "chemistry": "⚗️", "atom": "⚛️", "molecule": "🧪", "element": "⚛️", "compound": "🧪",
-            "reaction": "💥", "acid": "🧪", "base": "🧪", "ion": "⚡", "electron": "⚡",
-            "oxygen": "💨", "hydrogen": "💧", "carbon": "⚫", "nitrogen": "💨",
-            
-            "physics": "⚛️", "energy": "⚡", "force": "💪", "gravity": "🌍", "motion": "🚀",
-            "velocity": "🏃", "acceleration": "🚀", "momentum": "💥", "friction": "🔥",
-            "electricity": "⚡", "magnetism": "🧲", "light": "💡", "sound": "🔊",
-            
-            "math": "📐", "algebra": "🔢", "geometry": "📐", "calculus": "∫", "triangle": "📐",
-            "circle": "⭕", "square": "⬜", "equation": "🔢", "function": "📈",
-            
-            "history": "📜", "war": "⚔️", "civilization": "🏛️", "empire": "👑", "revolution": "🔥",
-            "democracy": "🗳️", "constitution": "📜", "treaty": "🤝",
-            
-            "geography": "🗺️", "mountain": "⛰️", "ocean": "🌊", "river": "🏞️", "desert": "🏜️",
-            "continent": "🌍", "country": "🏴", "city": "🏙️", "climate": "🌦️",
-            
-            "astronomy": "🌌", "star": "⭐", "planet": "🪐", "moon": "🌙", "sun": "☀️",
-            "galaxy": "🌌", "comet": "☄️", "asteroid": "☄️", "universe": "🌌",
-            
-            "computer": "💻", "algorithm": "🧮", "code": "👨‍💻", "program": "💻", "software": "📱",
-            "hardware": "🖥️", "internet": "🌐", "network": "🔗", "data": "📊",
-            
-            "medicine": "⚕️", "heart": "❤️", "brain": "🧠", "blood": "🩸", "disease": "🦠",
-            "virus": "🦠", "bacteria": "🦠", "vaccine": "💉", "antibiotic": "💊",
-            
-            "economy": "💰", "money": "💵", "market": "📈", "trade": "🤝", "bank": "🏦",
-            "stock": "📊", "business": "💼", "investment": "📈"
-        }
-    </div>
 
     <script>
         const video = document.getElementById('video');
@@ -439,13 +493,153 @@
         
         let stream = null;
         let rotation = 0;
-        let allFoundKeywords = [];
+        let currentMode = 'type';
 
-        // Parse emoji map
-        const emojiMap = JSON.parse(document.getElementById('emojiMap').textContent);
+        // Emoji mapping
+        const emojiMap = {
+            "biology": "🧬", "cell": "🔬", "dna": "🧬", "protein": "🧪", "enzyme": "⚗️",
+            "mitochondria": "🧬", "chloroplast": "🌱", "nucleus": "⚛️", "ribosome": "🧬",
+            "photosynthesis": "🌱", "respiration": "💨", "evolution": "🦕", "genetics": "🧬",
+            "chromosome": "🧬", "gene": "🧬", "bacteria": "🦠", "virus": "🦠",
+            
+            "chemistry": "⚗️", "atom": "⚛️", "molecule": "🧪", "element": "⚛️", "compound": "🧪",
+            "reaction": "💥", "acid": "🧪", "base": "🧪", "ion": "⚡", "electron": "⚡",
+            "oxygen": "💨", "hydrogen": "💧", "carbon": "⚫", "nitrogen": "💨", "water": "💧",
+            
+            "physics": "⚛️", "energy": "⚡", "force": "💪", "gravity": "🌍", "motion": "🚀",
+            "velocity": "🏃", "acceleration": "🚀", "momentum": "💥", "friction": "🔥",
+            "electricity": "⚡", "magnetism": "🧲", "light": "💡", "sound": "🔊",
+            
+            "math": "📐", "algebra": "🔢", "geometry": "📐", "calculus": "∫", "triangle": "📐",
+            "circle": "⭕", "square": "⬜", "equation": "🔢", "function": "📈", "theorem": "📐",
+            
+            "history": "📜", "war": "⚔️", "civilization": "🏛️", "empire": "👑", "revolution": "🔥",
+            "democracy": "🗳️", "constitution": "📜", "treaty": "🤝", "independence": "🗽",
+            
+            "geography": "🗺️", "mountain": "⛰️", "ocean": "🌊", "river": "🏞️", "desert": "🏜️",
+            "continent": "🌍", "country": "🏴", "city": "🏙️", "climate": "🌦️", "volcano": "🌋",
+            
+            "astronomy": "🌌", "star": "⭐", "planet": "🪐", "moon": "🌙", "sun": "☀️",
+            "galaxy": "🌌", "comet": "☄️", "asteroid": "☄️", "universe": "🌌",
+            
+            "computer": "💻", "algorithm": "🧮", "code": "👨‍💻", "program": "💻", "software": "📱",
+            "hardware": "🖥️", "internet": "🌐", "network": "🔗", "data": "📊",
+            
+            "medicine": "⚕️", "heart": "❤️", "brain": "🧠", "blood": "🩸", "disease": "🦠",
+            "vaccine": "💉", "antibiotic": "💊", "surgery": "🏥", "doctor": "👨‍⚕️"
+        };
 
-        // Common educational keywords to look for
-        const educationalKeywords = Object.keys(emojiMap);
+        // Popular suggestions
+        const popularConcepts = [
+            'mitochondria', 'photosynthesis', 'gravity', 'atom', 'democracy',
+            'evolution', 'electricity', 'ocean', 'planet', 'algorithm',
+            'heart', 'water', 'volcano', 'chromosome', 'energy'
+        ];
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const typeModeEl = document.getElementById('typeMode');
+            const cameraModeEl = document.getElementById('cameraMode');
+            const cameraControlsEl = document.getElementById('cameraControls');
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            
+            modeBtns.forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'type') {
+                typeModeEl.style.display = 'block';
+                cameraModeEl.classList.remove('active');
+                cameraControlsEl.style.display = 'none';
+                status.textContent = 'Type any word to learn about it!';
+                modeBtns[0].classList.add('active');
+            } else {
+                typeModeEl.style.display = 'none';
+                cameraModeEl.classList.add('active');
+                cameraControlsEl.style.display = 'flex';
+                status.textContent = 'Start camera and scan your textbook!';
+                modeBtns[1].classList.add('active');
+            }
+        }
+
+        function loadSuggestions() {
+            const suggestionsEl = document.getElementById('suggestions');
+            popularConcepts.forEach(concept => {
+                const chip = document.createElement('div');
+                chip.className = 'suggestion-chip';
+                chip.textContent = concept;
+                chip.onclick = () => {
+                    document.getElementById('keywordInput').value = concept;
+                    searchKeyword();
+                };
+                suggestionsEl.appendChild(chip);
+            });
+        }
+
+        async function searchKeyword() {
+            const keyword = document.getElementById('keywordInput').value.trim();
+            
+            if (!keyword) {
+                status.textContent = '⚠️ Please enter a keyword!';
+                status.className = 'status error';
+                return;
+            }
+
+            await fetchWikipediaInfo(keyword);
+        }
+
+        async function fetchWikipediaInfo(keyword) {
+            status.textContent = `🔍 Searching for "${keyword}"...`;
+            status.className = 'status scanning';
+            loading.classList.add('active');
+            document.getElementById('loadingText').textContent = 'Fetching information from Wikipedia...';
+
+            try {
+                const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyword)}`;
+                const response = await fetch(searchUrl);
+                const data = await response.json();
+
+                loading.classList.remove('active');
+
+                if (data.type === 'standard' && data.extract) {
+                    displayAR(keyword, data);
+                    status.textContent = `✅ Found: ${data.title}!`;
+                    status.className = 'status found';
+                } else {
+                    status.textContent = `⚠️ No information found for "${keyword}". Try another word!`;
+                    status.className = 'status error';
+                    arDisplay.classList.remove('active');
+                }
+            } catch (error) {
+                loading.classList.remove('active');
+                status.textContent = `❌ Error fetching info for "${keyword}". Check your internet connection!`;
+                status.className = 'status error';
+                console.error(error);
+            }
+        }
+
+        function displayAR(keyword, wikiData) {
+            const emoji = emojiMap[keyword.toLowerCase()] || '📚';
+            
+            document.getElementById('model3d').textContent = emoji;
+            document.getElementById('conceptTitle').textContent = wikiData.title;
+            document.getElementById('conceptDescription').textContent = wikiData.extract;
+            
+            const wikiLink = document.getElementById('wikiLink');
+            wikiLink.href = wikiData.content_urls.desktop.page;
+            
+            const gradients = [
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+                'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+            ];
+            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+            document.getElementById('modelViewer').style.background = randomGradient;
+
+            arDisplay.classList.add('active');
+            arDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
 
         async function startCamera() {
             try {
@@ -456,9 +650,8 @@
                 status.textContent = '✅ Camera active - Point at textbook and click Scan!';
                 status.className = 'status found';
             } catch (err) {
-                status.textContent = '❌ Camera access denied. Please allow camera permissions.';
-                status.className = 'status';
-                alert('Please allow camera access to use this feature!');
+                status.textContent = '❌ Camera access denied. Use Type mode instead!';
+                status.className = 'status error';
             }
         }
 
@@ -486,6 +679,7 @@
             status.textContent = '🔍 Reading text...';
             status.className = 'status scanning';
             loading.classList.add('active');
+            document.getElementById('loadingText').textContent = 'Scanning text from image...';
 
             try {
                 const result = await Tesseract.recognize(canvas, 'eng', {
@@ -493,114 +687,36 @@
                 });
 
                 const text = result.data.text.toLowerCase();
-                document.getElementById('detectedText').textContent = result.data.text || 'No text detected';
-
-                // Find ALL matching keywords
-                allFoundKeywords = [];
-                for (const keyword of educationalKeywords) {
-                    if (text.includes(keyword)) {
-                        allFoundKeywords.push(keyword);
-                    }
-                }
-
-                if (allFoundKeywords.length > 0) {
-                    // Pick the first keyword to display
-                    const primaryKeyword = allFoundKeywords[0];
-                    await fetchWikipediaInfo(primaryKeyword, text);
-                    
-                    // Show other found keywords
-                    if (allFoundKeywords.length > 1) {
-                        displayOtherKeywords(allFoundKeywords.slice(1));
-                    }
-                } else {
-                    // Try to extract the most important word from text
-                    const words = text.match(/\b[a-z]{4,}\b/gi);
-                    if (words && words.length > 0) {
-                        const importantWord = words[0];
-                        await fetchWikipediaInfo(importantWord, text);
-                    } else {
-                        status.textContent = '❌ No recognizable concept found. Try scanning clearer text.';
-                        loading.classList.remove('active');
-                        arDisplay.classList.remove('active');
-                    }
-                }
-            } catch (error) {
-                console.error(error);
-                status.textContent = '❌ Error scanning. Please try again.';
-                loading.classList.remove('active');
-            }
-        }
-
-        async function fetchWikipediaInfo(keyword, detectedText) {
-            try {
-                // Fetch from Wikipedia API
-                const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyword)}`;
                 
-                const response = await fetch(searchUrl);
-                const data = await response.json();
+                // Find best matching keyword
+                let foundKeyword = null;
+                const words = text.split(/\s+/);
+                
+                for (const word of words) {
+                    const cleanWord = word.replace(/[^a-z]/g, '');
+                    if (cleanWord.length >= 4 && Object.keys(emojiMap).includes(cleanWord)) {
+                        foundKeyword = cleanWord;
+                        break;
+                    }
+                }
 
-                loading.classList.remove('active');
+                if (!foundKeyword && words.length > 0) {
+                    foundKeyword = words.find(w => w.length >= 5)?.replace(/[^a-z]/g, '');
+                }
 
-                if (data.type === 'standard') {
-                    displayAR(keyword, data, detectedText);
-                    status.textContent = `✅ Found: ${data.title}! (Powered by Wikipedia)`;
-                    status.className = 'status found';
+                if (foundKeyword) {
+                    await fetchWikipediaInfo(foundKeyword);
                 } else {
-                    status.textContent = `⚠️ "${keyword}" found but no detailed info available. Try another word!`;
-                    status.className = 'status';
+                    loading.classList.remove('active');
+                    status.textContent = '❌ No clear text found. Try Type mode or better lighting!';
+                    status.className = 'status error';
                 }
             } catch (error) {
-                loading.classList.remove('active');
-                status.textContent = `⚠️ Could not fetch info for "${keyword}". Try scanning again!`;
                 console.error(error);
+                loading.classList.remove('active');
+                status.textContent = '❌ Scan failed. Try Type mode instead!';
+                status.className = 'status error';
             }
-        }
-
-        function displayAR(keyword, wikiData, detectedText) {
-            // Get appropriate emoji
-            const emoji = emojiMap[keyword.toLowerCase()] || '📚';
-            
-            document.getElementById('model3d').textContent = emoji;
-            document.getElementById('conceptTitle').textContent = wikiData.title;
-            document.getElementById('conceptDescription').textContent = wikiData.extract;
-            
-            // Set Wikipedia link
-            const wikiLink = document.getElementById('wikiLink');
-            wikiLink.href = wikiData.content_urls.desktop.page;
-            
-            // Random gradient for visual variety
-            const gradients = [
-                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-                'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-                'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
-            ];
-            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
-            document.getElementById('modelViewer').style.background = randomGradient;
-
-            arDisplay.classList.add('active');
-            arDisplay.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function displayOtherKeywords(keywords) {
-            const keywordsDiv = document.getElementById('keywordsFound');
-            const keywordsList = document.getElementById('keywordsList');
-            
-            keywordsList.innerHTML = '';
-            keywords.forEach(kw => {
-                const tag = document.createElement('span');
-                tag.className = 'keyword-tag';
-                tag.textContent = kw;
-                tag.onclick = () => {
-                    fetchWikipediaInfo(kw, '');
-                    keywordsDiv.style.display = 'none';
-                };
-                keywordsList.appendChild(tag);
-            });
-            
-            keywordsDiv.style.display = 'block';
         }
 
         function rotateModel() {
@@ -609,7 +725,7 @@
         }
 
         window.addEventListener('load', () => {
-            setTimeout(startCamera, 500);
+            loadSuggestions();
         });
     </script>
 </body>
