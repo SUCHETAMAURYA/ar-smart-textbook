@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Smart Textbook - Live Scanner</title>
+    <title>AR Smart Textbook - Universal Scanner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
     <style>
         * {
@@ -31,12 +31,22 @@
             margin: 0 auto;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 15px;
         }
 
         .header h1 {
             font-size: 24px;
             color: #667eea;
+        }
+
+        .badge {
+            background: #48bb78;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
         .main-container {
@@ -182,6 +192,7 @@
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             border-radius: 15px;
             margin-bottom: 20px;
+            position: relative;
         }
 
         .model-3d {
@@ -220,17 +231,21 @@
             margin-bottom: 15px;
         }
 
-        .facts-list {
-            list-style: none;
-            padding: 0;
+        .wiki-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
         }
 
-        .facts-list li {
-            background: white;
-            padding: 10px 15px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+        .wiki-link:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
         }
 
         .detected-text {
@@ -243,6 +258,35 @@
             color: #2d3748;
             max-height: 150px;
             overflow-y: auto;
+        }
+
+        .keywords-found {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .keywords-found h4 {
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+
+        .keyword-tag {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            margin: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .keyword-tag:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
         }
 
         canvas {
@@ -274,6 +318,10 @@
             100% { transform: rotate(360deg); }
         }
 
+        .emoji-map {
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 18px;
@@ -293,8 +341,11 @@
 <body>
     <div class="header">
         <div class="header-content">
-            <span style="font-size: 32px;">📚</span>
-            <h1>AR Smart Textbook - Live Scanner</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="font-size: 32px;">📚</span>
+                <h1>AR Smart Textbook - Universal Scanner</h1>
+            </div>
+            <div class="badge">∞ Unlimited Concepts</div>
         </div>
     </div>
 
@@ -302,20 +353,20 @@
         <div class="camera-container">
             <video id="video" autoplay playsinline></video>
             <div class="overlay"></div>
-            <div class="scan-instruction">📷 Point camera at textbook</div>
+            <div class="scan-instruction">📷 Point at ANY textbook - Works with ALL subjects!</div>
         </div>
 
         <div class="controls">
             <button class="btn-primary" onclick="startCamera()">📹 Start Camera</button>
-            <button class="btn-secondary" onclick="captureAndScan()">🔍 Scan Text</button>
+            <button class="btn-secondary" onclick="captureAndScan()">🔍 Scan & Learn</button>
             <button class="btn-primary" onclick="toggleCamera()">⏸️ Pause</button>
         </div>
 
-        <div class="status" id="status">Ready to scan textbook pages</div>
+        <div class="status" id="status">Ready to scan ANY word from your textbook!</div>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Reading text...</p>
+            <p>Reading text & fetching info from Wikipedia...</p>
         </div>
 
         <div class="ar-display" id="arDisplay">
@@ -325,7 +376,11 @@
             <div class="info-card">
                 <h2 id="conceptTitle">Concept Name</h2>
                 <p id="conceptDescription">Description will appear here</p>
-                <ul class="facts-list" id="factsList"></ul>
+                <a id="wikiLink" href="#" target="_blank" class="wiki-link">📖 Read Full Article on Wikipedia</a>
+            </div>
+            <div class="keywords-found" id="keywordsFound" style="display:none;">
+                <h4>🎯 Other concepts found in this scan:</h4>
+                <div id="keywordsList"></div>
             </div>
             <div class="detected-text">
                 <strong>Detected Text:</strong>
@@ -335,6 +390,44 @@
     </div>
 
     <canvas id="canvas"></canvas>
+
+    <!-- Emoji mapping for different subjects -->
+    <div class="emoji-map" id="emojiMap">
+        {
+            "biology": "🧬", "cell": "🔬", "dna": "🧬", "protein": "🧪", "enzyme": "⚗️",
+            "mitochondria": "🧬", "chloroplast": "🌱", "nucleus": "⚛️", "ribosome": "🧬",
+            "photosynthesis": "🌱", "respiration": "💨", "evolution": "🦕", "genetics": "🧬",
+            
+            "chemistry": "⚗️", "atom": "⚛️", "molecule": "🧪", "element": "⚛️", "compound": "🧪",
+            "reaction": "💥", "acid": "🧪", "base": "🧪", "ion": "⚡", "electron": "⚡",
+            "oxygen": "💨", "hydrogen": "💧", "carbon": "⚫", "nitrogen": "💨",
+            
+            "physics": "⚛️", "energy": "⚡", "force": "💪", "gravity": "🌍", "motion": "🚀",
+            "velocity": "🏃", "acceleration": "🚀", "momentum": "💥", "friction": "🔥",
+            "electricity": "⚡", "magnetism": "🧲", "light": "💡", "sound": "🔊",
+            
+            "math": "📐", "algebra": "🔢", "geometry": "📐", "calculus": "∫", "triangle": "📐",
+            "circle": "⭕", "square": "⬜", "equation": "🔢", "function": "📈",
+            
+            "history": "📜", "war": "⚔️", "civilization": "🏛️", "empire": "👑", "revolution": "🔥",
+            "democracy": "🗳️", "constitution": "📜", "treaty": "🤝",
+            
+            "geography": "🗺️", "mountain": "⛰️", "ocean": "🌊", "river": "🏞️", "desert": "🏜️",
+            "continent": "🌍", "country": "🏴", "city": "🏙️", "climate": "🌦️",
+            
+            "astronomy": "🌌", "star": "⭐", "planet": "🪐", "moon": "🌙", "sun": "☀️",
+            "galaxy": "🌌", "comet": "☄️", "asteroid": "☄️", "universe": "🌌",
+            
+            "computer": "💻", "algorithm": "🧮", "code": "👨‍💻", "program": "💻", "software": "📱",
+            "hardware": "🖥️", "internet": "🌐", "network": "🔗", "data": "📊",
+            
+            "medicine": "⚕️", "heart": "❤️", "brain": "🧠", "blood": "🩸", "disease": "🦠",
+            "virus": "🦠", "bacteria": "🦠", "vaccine": "💉", "antibiotic": "💊",
+            
+            "economy": "💰", "money": "💵", "market": "📈", "trade": "🤝", "bank": "🏦",
+            "stock": "📊", "business": "💼", "investment": "📈"
+        }
+    </div>
 
     <script>
         const video = document.getElementById('video');
@@ -346,106 +439,13 @@
         
         let stream = null;
         let rotation = 0;
+        let allFoundKeywords = [];
 
-        // Enhanced knowledge base with more concepts
-        const knowledgeBase = {
-            'mitochondria': {
-                title: 'Mitochondria',
-                description: 'The powerhouse of the cell that produces ATP through cellular respiration. Found in most eukaryotic cells.',
-                model: '🧬',
-                gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                facts: [
-                    'Produces ATP energy through cellular respiration',
-                    'Has its own DNA separate from nuclear DNA',
-                    'Double membrane structure with cristae',
-                    'Believed to have originated from bacteria'
-                ]
-            },
-            'photosynthesis': {
-                title: 'Photosynthesis',
-                description: 'The process by which green plants convert light energy into chemical energy in the form of glucose.',
-                model: '🌱',
-                gradient: 'linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%)',
-                facts: [
-                    'Uses carbon dioxide and water as reactants',
-                    'Produces glucose and oxygen',
-                    'Occurs in chloroplasts of plant cells',
-                    'Light-dependent and light-independent reactions'
-                ]
-            },
-            'dna': {
-                title: 'DNA (Deoxyribonucleic Acid)',
-                description: 'The hereditary material that contains the genetic instructions for all living organisms.',
-                model: '🧬',
-                gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-                facts: [
-                    'Double helix structure discovered by Watson and Crick',
-                    'Contains genetic information in sequences',
-                    'Made of four nucleotides: A, T, G, C',
-                    'Can replicate itself for cell division'
-                ]
-            },
-            'cell': {
-                title: 'Cell',
-                description: 'The basic structural and functional unit of all living organisms.',
-                model: '🔬',
-                gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-                facts: [
-                    'Prokaryotic cells lack a nucleus',
-                    'Eukaryotic cells have membrane-bound organelles',
-                    'Cell membrane controls what enters and exits',
-                    'Contains cytoplasm and genetic material'
-                ]
-            },
-            'atom': {
-                title: 'Atom',
-                description: 'The smallest unit of ordinary matter that forms a chemical element.',
-                model: '⚛️',
-                gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                facts: [
-                    'Contains protons and neutrons in the nucleus',
-                    'Electrons orbit in electron shells',
-                    'Makes up all matter in the universe',
-                    'Atomic number equals number of protons'
-                ]
-            },
-            'gravity': {
-                title: 'Gravity',
-                description: 'The force that attracts objects with mass toward each other.',
-                model: '🌍',
-                gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                facts: [
-                    'Keeps planets in orbit around stars',
-                    'Discovered and described by Isaac Newton',
-                    'Works on all objects with mass',
-                    'Explains tides, orbits, and falling objects'
-                ]
-            },
-            'neuron': {
-                title: 'Neuron',
-                description: 'A specialized cell that transmits nerve impulses in the nervous system.',
-                model: '🧠',
-                gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
-                facts: [
-                    'Has dendrites that receive signals',
-                    'Axon transmits electrical impulses',
-                    'Synapses connect neurons together',
-                    'Can process and transmit information'
-                ]
-            },
-            'water': {
-                title: 'Water (H₂O)',
-                description: 'A polar molecule essential for all known forms of life.',
-                model: '💧',
-                gradient: 'linear-gradient(135deg, #96deda 0%, #50c9c3 100%)',
-                facts: [
-                    'Made of two hydrogen and one oxygen atom',
-                    'Excellent solvent for many substances',
-                    'High specific heat capacity',
-                    'Expands when it freezes'
-                ]
-            }
-        };
+        // Parse emoji map
+        const emojiMap = JSON.parse(document.getElementById('emojiMap').textContent);
+
+        // Common educational keywords to look for
+        const educationalKeywords = Object.keys(emojiMap);
 
         async function startCamera() {
             try {
@@ -453,7 +453,7 @@
                     video: { facingMode: 'environment' } 
                 });
                 video.srcObject = stream;
-                status.textContent = '✅ Camera active - Point at textbook and click Scan';
+                status.textContent = '✅ Camera active - Point at textbook and click Scan!';
                 status.className = 'status found';
             } catch (err) {
                 status.textContent = '❌ Camera access denied. Please allow camera permissions.';
@@ -479,73 +479,128 @@
                 return;
             }
 
-            // Capture frame
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             ctx.drawImage(video, 0, 0);
 
-            status.textContent = '🔍 Scanning text...';
+            status.textContent = '🔍 Reading text...';
             status.className = 'status scanning';
             loading.classList.add('active');
 
             try {
-                // OCR with Tesseract
-                const result = await Tesseract.recognize(
-                    canvas,
-                    'eng',
-                    {
-                        logger: m => console.log(m)
-                    }
-                );
+                const result = await Tesseract.recognize(canvas, 'eng', {
+                    logger: m => console.log(m)
+                });
 
                 const text = result.data.text.toLowerCase();
                 document.getElementById('detectedText').textContent = result.data.text || 'No text detected';
 
-                loading.classList.remove('active');
-
-                // Find matching keyword
-                let foundKeyword = null;
-                for (const keyword in knowledgeBase) {
+                // Find ALL matching keywords
+                allFoundKeywords = [];
+                for (const keyword of educationalKeywords) {
                     if (text.includes(keyword)) {
-                        foundKeyword = keyword;
-                        break;
+                        allFoundKeywords.push(keyword);
                     }
                 }
 
-                if (foundKeyword) {
-                    displayAR(foundKeyword, result.data.text);
-                    status.textContent = `✅ Found: ${knowledgeBase[foundKeyword].title}!`;
-                    status.className = 'status found';
+                if (allFoundKeywords.length > 0) {
+                    // Pick the first keyword to display
+                    const primaryKeyword = allFoundKeywords[0];
+                    await fetchWikipediaInfo(primaryKeyword, text);
+                    
+                    // Show other found keywords
+                    if (allFoundKeywords.length > 1) {
+                        displayOtherKeywords(allFoundKeywords.slice(1));
+                    }
                 } else {
-                    status.textContent = '❌ No matching concept found. Try: mitochondria, DNA, cell, photosynthesis, atom, gravity, neuron, water';
-                    status.className = 'status';
-                    arDisplay.classList.remove('active');
+                    // Try to extract the most important word from text
+                    const words = text.match(/\b[a-z]{4,}\b/gi);
+                    if (words && words.length > 0) {
+                        const importantWord = words[0];
+                        await fetchWikipediaInfo(importantWord, text);
+                    } else {
+                        status.textContent = '❌ No recognizable concept found. Try scanning clearer text.';
+                        loading.classList.remove('active');
+                        arDisplay.classList.remove('active');
+                    }
                 }
             } catch (error) {
                 console.error(error);
-                status.textContent = '❌ Error scanning text. Please try again.';
+                status.textContent = '❌ Error scanning. Please try again.';
                 loading.classList.remove('active');
             }
         }
 
-        function displayAR(keyword, detectedText) {
-            const data = knowledgeBase[keyword];
+        async function fetchWikipediaInfo(keyword, detectedText) {
+            try {
+                // Fetch from Wikipedia API
+                const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyword)}`;
+                
+                const response = await fetch(searchUrl);
+                const data = await response.json();
+
+                loading.classList.remove('active');
+
+                if (data.type === 'standard') {
+                    displayAR(keyword, data, detectedText);
+                    status.textContent = `✅ Found: ${data.title}! (Powered by Wikipedia)`;
+                    status.className = 'status found';
+                } else {
+                    status.textContent = `⚠️ "${keyword}" found but no detailed info available. Try another word!`;
+                    status.className = 'status';
+                }
+            } catch (error) {
+                loading.classList.remove('active');
+                status.textContent = `⚠️ Could not fetch info for "${keyword}". Try scanning again!`;
+                console.error(error);
+            }
+        }
+
+        function displayAR(keyword, wikiData, detectedText) {
+            // Get appropriate emoji
+            const emoji = emojiMap[keyword.toLowerCase()] || '📚';
             
-            document.getElementById('model3d').textContent = data.model;
-            document.getElementById('conceptTitle').textContent = data.title;
-            document.getElementById('conceptDescription').textContent = data.description;
-            document.getElementById('modelViewer').style.background = data.gradient;
+            document.getElementById('model3d').textContent = emoji;
+            document.getElementById('conceptTitle').textContent = wikiData.title;
+            document.getElementById('conceptDescription').textContent = wikiData.extract;
             
-            const factsList = document.getElementById('factsList');
-            factsList.innerHTML = '';
-            data.facts.forEach(fact => {
-                const li = document.createElement('li');
-                li.textContent = fact;
-                factsList.appendChild(li);
-            });
+            // Set Wikipedia link
+            const wikiLink = document.getElementById('wikiLink');
+            wikiLink.href = wikiData.content_urls.desktop.page;
+            
+            // Random gradient for visual variety
+            const gradients = [
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+                'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+            ];
+            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+            document.getElementById('modelViewer').style.background = randomGradient;
 
             arDisplay.classList.add('active');
             arDisplay.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displayOtherKeywords(keywords) {
+            const keywordsDiv = document.getElementById('keywordsFound');
+            const keywordsList = document.getElementById('keywordsList');
+            
+            keywordsList.innerHTML = '';
+            keywords.forEach(kw => {
+                const tag = document.createElement('span');
+                tag.className = 'keyword-tag';
+                tag.textContent = kw;
+                tag.onclick = () => {
+                    fetchWikipediaInfo(kw, '');
+                    keywordsDiv.style.display = 'none';
+                };
+                keywordsList.appendChild(tag);
+            });
+            
+            keywordsDiv.style.display = 'block';
         }
 
         function rotateModel() {
@@ -553,7 +608,6 @@
             document.getElementById('model3d').style.transform = `rotate(${rotation}deg)`;
         }
 
-        // Auto-start camera on load
         window.addEventListener('load', () => {
             setTimeout(startCamera, 500);
         });
