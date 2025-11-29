@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Smart Textbook - Universal Scanner</title>
+    <title>AR Smart Textbook - Universal Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
     <style>
         * {
@@ -360,6 +360,44 @@
             color: white;
         }
 
+        .search-results {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .result-item {
+            padding: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .result-item:hover {
+            background: #f7fafc;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .result-desc {
+            font-size: 14px;
+            color: #718096;
+        }
+
         canvas {
             display: none;
         }
@@ -410,9 +448,9 @@
         <div class="header-content">
             <div style="display: flex; align-items: center; gap: 15px;">
                 <span style="font-size: 32px;">📚</span>
-                <h1>AR Smart Textbook</h1>
+                <h1>AR Smart Textbook - Universal Edition</h1>
             </div>
-            <div class="badge">∞ Unlimited Concepts</div>
+            <div class="badge">🌍 Works with ANY Word!</div>
         </div>
     </div>
 
@@ -425,14 +463,14 @@
 
         <!-- Type Mode -->
         <div class="input-section" id="typeMode">
-            <h2>🔍 Search Any Concept</h2>
+            <h2>🔍 Search ANY Concept</h2>
             <div class="input-group">
-                <label>Enter keyword from your textbook:</label>
+                <label>Enter ANY word from your textbook:</label>
                 <input 
                     type="text" 
                     class="input-field" 
                     id="keywordInput" 
-                    placeholder="e.g., mitochondria, photosynthesis, gravity..."
+                    placeholder="Try: train, computer, Einstein, football, anything..."
                     onkeypress="if(event.key === 'Enter') searchKeyword()"
                 >
             </div>
@@ -443,8 +481,10 @@
                 </button>
             </div>
 
+            <div class="search-results" id="searchResults"></div>
+
             <div class="input-group" style="margin-top: 20px;">
-                <label>Popular concepts:</label>
+                <label>Try these examples:</label>
                 <div class="suggestions" id="suggestions"></div>
             </div>
         </div>
@@ -462,11 +502,11 @@
             <button class="btn-outline" onclick="toggleCamera()">⏸️ Pause</button>
         </div>
 
-        <div class="status" id="status">Type any word to learn about it!</div>
+        <div class="status" id="status">Type ANY word to learn about it! Works with everything!</div>
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p id="loadingText">Fetching information...</p>
+            <p id="loadingText">Searching Wikipedia...</p>
         </div>
 
         <div class="ar-display" id="arDisplay">
@@ -495,45 +535,55 @@
         let rotation = 0;
         let currentMode = 'type';
 
-        // Emoji mapping
+        // Extended emoji mapping
         const emojiMap = {
+            // Science
             "biology": "🧬", "cell": "🔬", "dna": "🧬", "protein": "🧪", "enzyme": "⚗️",
             "mitochondria": "🧬", "chloroplast": "🌱", "nucleus": "⚛️", "ribosome": "🧬",
             "photosynthesis": "🌱", "respiration": "💨", "evolution": "🦕", "genetics": "🧬",
-            "chromosome": "🧬", "gene": "🧬", "bacteria": "🦠", "virus": "🦠",
+            "chemistry": "⚗️", "atom": "⚛️", "molecule": "🧪", "element": "⚛️",
+            "physics": "⚛️", "energy": "⚡", "force": "💪", "gravity": "🌍",
             
-            "chemistry": "⚗️", "atom": "⚛️", "molecule": "🧪", "element": "⚛️", "compound": "🧪",
-            "reaction": "💥", "acid": "🧪", "base": "🧪", "ion": "⚡", "electron": "⚡",
-            "oxygen": "💨", "hydrogen": "💧", "carbon": "⚫", "nitrogen": "💨", "water": "💧",
+            // Transportation
+            "train": "🚂", "car": "🚗", "airplane": "✈️", "ship": "🚢", "bus": "🚌",
+            "bicycle": "🚲", "motorcycle": "🏍️", "truck": "🚚", "boat": "⛵",
             
-            "physics": "⚛️", "energy": "⚡", "force": "💪", "gravity": "🌍", "motion": "🚀",
-            "velocity": "🏃", "acceleration": "🚀", "momentum": "💥", "friction": "🔥",
-            "electricity": "⚡", "magnetism": "🧲", "light": "💡", "sound": "🔊",
+            // Technology
+            "computer": "💻", "internet": "🌐", "smartphone": "📱", "robot": "🤖",
+            "software": "💿", "hardware": "🖥️", "algorithm": "🧮", "code": "👨‍💻",
             
-            "math": "📐", "algebra": "🔢", "geometry": "📐", "calculus": "∫", "triangle": "📐",
-            "circle": "⭕", "square": "⬜", "equation": "🔢", "function": "📈", "theorem": "📐",
+            // Nature
+            "tree": "🌳", "flower": "🌸", "mountain": "⛰️", "ocean": "🌊", "river": "🏞️",
+            "forest": "🌲", "desert": "🏜️", "volcano": "🌋", "earthquake": "💥",
             
-            "history": "📜", "war": "⚔️", "civilization": "🏛️", "empire": "👑", "revolution": "🔥",
-            "democracy": "🗳️", "constitution": "📜", "treaty": "🤝", "independence": "🗽",
+            // Animals
+            "dog": "🐕", "cat": "🐈", "bird": "🐦", "fish": "🐟", "elephant": "🐘",
+            "lion": "🦁", "tiger": "🐯", "bear": "🐻", "monkey": "🐵",
             
-            "geography": "🗺️", "mountain": "⛰️", "ocean": "🌊", "river": "🏞️", "desert": "🏜️",
-            "continent": "🌍", "country": "🏴", "city": "🏙️", "climate": "🌦️", "volcano": "🌋",
+            // Food
+            "apple": "🍎", "banana": "🍌", "pizza": "🍕", "bread": "🍞", "rice": "🍚",
             
-            "astronomy": "🌌", "star": "⭐", "planet": "🪐", "moon": "🌙", "sun": "☀️",
-            "galaxy": "🌌", "comet": "☄️", "asteroid": "☄️", "universe": "🌌",
+            // Sports
+            "football": "⚽", "basketball": "🏀", "tennis": "🎾", "cricket": "🏏",
             
-            "computer": "💻", "algorithm": "🧮", "code": "👨‍💻", "program": "💻", "software": "📱",
-            "hardware": "🖥️", "internet": "🌐", "network": "🔗", "data": "📊",
+            // Space
+            "star": "⭐", "planet": "🪐", "moon": "🌙", "sun": "☀️", "galaxy": "🌌",
             
-            "medicine": "⚕️", "heart": "❤️", "brain": "🧠", "blood": "🩸", "disease": "🦠",
-            "vaccine": "💉", "antibiotic": "💊", "surgery": "🏥", "doctor": "👨‍⚕️"
+            // Body
+            "heart": "❤️", "brain": "🧠", "eye": "👁️", "hand": "✋",
+            
+            // Education
+            "book": "📚", "school": "🏫", "teacher": "👨‍🏫", "student": "👨‍🎓",
+            
+            // History
+            "war": "⚔️", "king": "👑", "castle": "🏰", "democracy": "🗳️"
         };
 
-        // Popular suggestions
+        // Popular examples - diverse topics
         const popularConcepts = [
-            'mitochondria', 'photosynthesis', 'gravity', 'atom', 'democracy',
-            'evolution', 'electricity', 'ocean', 'planet', 'algorithm',
-            'heart', 'water', 'volcano', 'chromosome', 'energy'
+            'train', 'computer', 'football', 'Einstein', 'democracy',
+            'volcano', 'heart', 'robot', 'galaxy', 'ocean',
+            'evolution', 'electricity', 'Shakespeare', 'pyramid', 'music'
         ];
 
         function switchMode(mode) {
@@ -549,7 +599,7 @@
                 typeModeEl.style.display = 'block';
                 cameraModeEl.classList.remove('active');
                 cameraControlsEl.style.display = 'none';
-                status.textContent = 'Type any word to learn about it!';
+                status.textContent = 'Type ANY word to learn about it!';
                 modeBtns[0].classList.add('active');
             } else {
                 typeModeEl.style.display = 'none';
@@ -578,46 +628,112 @@
             const keyword = document.getElementById('keywordInput').value.trim();
             
             if (!keyword) {
-                status.textContent = '⚠️ Please enter a keyword!';
+                status.textContent = '⚠️ Please enter a word!';
                 status.className = 'status error';
                 return;
             }
 
-            await fetchWikipediaInfo(keyword);
-        }
-
-        async function fetchWikipediaInfo(keyword) {
+            // First try: Direct Wikipedia search
             status.textContent = `🔍 Searching for "${keyword}"...`;
             status.className = 'status scanning';
             loading.classList.add('active');
-            document.getElementById('loadingText').textContent = 'Fetching information from Wikipedia...';
+            document.getElementById('searchResults').classList.remove('active');
 
             try {
-                const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyword)}`;
-                const response = await fetch(searchUrl);
-                const data = await response.json();
+                // Try direct page first
+                const directUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keyword)}`;
+                const directResponse = await fetch(directUrl);
+                const directData = await directResponse.json();
 
-                loading.classList.remove('active');
-
-                if (data.type === 'standard' && data.extract) {
-                    displayAR(keyword, data);
-                    status.textContent = `✅ Found: ${data.title}!`;
+                if (directData.type === 'standard' && directData.extract) {
+                    loading.classList.remove('active');
+                    displayAR(keyword, directData);
+                    status.textContent = `✅ Found: ${directData.title}!`;
                     status.className = 'status found';
+                    return;
+                }
+
+                // If direct fails, try search API
+                const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(keyword)}&limit=5&format=json&origin=*`;
+                const searchResponse = await fetch(searchUrl);
+                const searchData = await searchResponse.json();
+
+                if (searchData[1].length > 0) {
+                    // Show multiple results
+                    displaySearchResults(searchData);
                 } else {
-                    status.textContent = `⚠️ No information found for "${keyword}". Try another word!`;
+                    loading.classList.remove('active');
+                    status.textContent = `❌ No information found for "${keyword}". Try another word or check spelling!`;
                     status.className = 'status error';
                     arDisplay.classList.remove('active');
                 }
             } catch (error) {
                 loading.classList.remove('active');
-                status.textContent = `❌ Error fetching info for "${keyword}". Check your internet connection!`;
+                status.textContent = `❌ Search error. Check internet connection!`;
                 status.className = 'status error';
                 console.error(error);
             }
         }
 
+        function displaySearchResults(searchData) {
+            loading.classList.remove('active');
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<h3 style="margin-bottom: 15px; color: #2d3748;">📋 Found multiple results. Choose one:</h3>';
+            
+            const titles = searchData[1];
+            const descriptions = searchData[2];
+            const urls = searchData[3];
+
+            titles.forEach((title, index) => {
+                const item = document.createElement('div');
+                item.className = 'result-item';
+                item.innerHTML = `
+                    <div class="result-title">${title}</div>
+                    <div class="result-desc">${descriptions[index] || 'Click to learn more'}</div>
+                `;
+                item.onclick = () => fetchPageByTitle(title);
+                resultsDiv.appendChild(item);
+            });
+
+            resultsDiv.classList.add('active');
+            status.textContent = `✅ Found ${titles.length} results!`;
+            status.className = 'status found';
+        }
+
+        async function fetchPageByTitle(title) {
+            status.textContent = `Loading ${title}...`;
+            status.className = 'status scanning';
+            loading.classList.add('active');
+            document.getElementById('searchResults').classList.remove('active');
+
+            try {
+                const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                loading.classList.remove('active');
+                displayAR(title, data);
+                status.textContent = `✅ Loaded: ${data.title}!`;
+                status.className = 'status found';
+            } catch (error) {
+                loading.classList.remove('active');
+                status.textContent = `❌ Error loading page`;
+                status.className = 'status error';
+            }
+        }
+
         function displayAR(keyword, wikiData) {
-            const emoji = emojiMap[keyword.toLowerCase()] || '📚';
+            // Smart emoji selection
+            const lowerKeyword = keyword.toLowerCase();
+            let emoji = '📚'; // default
+            
+            // Check if keyword matches any emoji map
+            for (const [key, value] of Object.entries(emojiMap)) {
+                if (lowerKeyword.includes(key) || key.includes(lowerKeyword)) {
+                    emoji = value;
+                    break;
+                }
+            }
             
             document.getElementById('model3d').textContent = emoji;
             document.getElementById('conceptTitle').textContent = wikiData.title;
@@ -632,7 +748,9 @@
                 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
                 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
                 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-                'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+                'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+                'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+                'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
             ];
             const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
             document.getElementById('modelViewer').style.background = randomGradient;
@@ -647,10 +765,10 @@
                     video: { facingMode: 'environment' } 
                 });
                 video.srcObject = stream;
-                status.textContent = '✅ Camera active - Point at textbook and click Scan!';
+                status.textContent = '✅ Camera active - Point and scan!';
                 status.className = 'status found';
             } catch (err) {
-                status.textContent = '❌ Camera access denied. Use Type mode instead!';
+                status.textContent = '❌ Camera denied. Use Type mode!';
                 status.className = 'status error';
             }
         }
@@ -668,7 +786,7 @@
 
         async function captureAndScan() {
             if (!video.srcObject) {
-                alert('Please start the camera first!');
+                alert('Please start camera first!');
                 return;
             }
 
@@ -679,42 +797,28 @@
             status.textContent = '🔍 Reading text...';
             status.className = 'status scanning';
             loading.classList.add('active');
-            document.getElementById('loadingText').textContent = 'Scanning text from image...';
 
             try {
                 const result = await Tesseract.recognize(canvas, 'eng', {
                     logger: m => console.log(m)
                 });
 
-                const text = result.data.text.toLowerCase();
-                
-                // Find best matching keyword
-                let foundKeyword = null;
-                const words = text.split(/\s+/);
-                
-                for (const word of words) {
-                    const cleanWord = word.replace(/[^a-z]/g, '');
-                    if (cleanWord.length >= 4 && Object.keys(emojiMap).includes(cleanWord)) {
-                        foundKeyword = cleanWord;
-                        break;
-                    }
-                }
+                const words = result.data.text.toLowerCase()
+                    .split(/\s+/)
+                    .map(w => w.replace(/[^a-z]/g, ''))
+                    .filter(w => w.length >= 3);
 
-                if (!foundKeyword && words.length > 0) {
-                    foundKeyword = words.find(w => w.length >= 5)?.replace(/[^a-z]/g, '');
-                }
-
-                if (foundKeyword) {
-                    await fetchWikipediaInfo(foundKeyword);
+                if (words.length > 0) {
+                    document.getElementById('keywordInput').value = words[0];
+                    await searchKeyword();
                 } else {
                     loading.classList.remove('active');
-                    status.textContent = '❌ No clear text found. Try Type mode or better lighting!';
+                    status.textContent = '❌ No text found. Try Type mode!';
                     status.className = 'status error';
                 }
             } catch (error) {
-                console.error(error);
                 loading.classList.remove('active');
-                status.textContent = '❌ Scan failed. Try Type mode instead!';
+                status.textContent = '❌ Scan failed. Use Type mode!';
                 status.className = 'status error';
             }
         }
